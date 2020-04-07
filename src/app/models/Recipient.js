@@ -63,6 +63,18 @@ class Recipient extends Model {
             }
         );
     }
+
+    equals(recipient) {
+        if (recipient.name !== this.name) return false;
+        if (recipient.street !== this.street) return false;
+        if (recipient.number !== this.number) return false;
+        if (recipient.complement !== this.complement) return false;
+        if (recipient.city !== this.city) return false;
+        if (recipient.state !== this.state) return false;
+        if (recipient.zip_code !== this.zip_code) return false;
+
+        return true;
+    }
 }
 
 export default Recipient;

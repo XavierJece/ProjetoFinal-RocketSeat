@@ -73,7 +73,70 @@ class RecipientController {
     }
 
     async update(req, res) {
-        console.log('Duvida');
+        const zip = new RegExp('\\d{5}[-]\\d{2}');
+
+        const schema = Yup.object().shape({
+            name: Yup.string(),
+            street: Yup.string(),
+            number: Yup.number().positive(),
+            complement: Yup.string(),
+            state: Yup.string().length(2),
+            zip_code: Yup.string()
+                .matches(zip)
+                .length(9),
+        });
+
+        if (!(await schema.isValid(req.body))) {
+            return res.status(400).json({ error: 'Validation fails' });
+        }
+
+        const apiResponse = (
+            await axios.get(
+                `https://viacep.com.br/ws/${req.body.zip_code}/json/`
+            )
+        ).data;
+
+        if (apiResponse.length < 1) {
+            return res
+                .status(400)
+                .json({ error: 'Zip code does not exist :/' });
+        }
+
+        if (apiResponse.logradouro !== '') {
+            req.body.street = apiResponse.logradouro;
+        }
+
+        if (apiResponse.localidade !== '') {
+            req.body.city = apiResponse.localidade;
+        }
+
+        if (apiResponse.uf !== '') {
+            req.body.state = apiResponse.uf;
+        }
+
+        const recipientExists = await Recipient.findOne({
+            where: {
+                street: req.body.street,
+                number: req.body.number,
+                complement: req.body.complement,
+                city: req.body.city,
+                state: req.body.state,
+            },
+        });
+
+        const recipient = await Recipient.findByPk(req.params.id);
+
+        if (recipientExists) {
+            if (!recipientExists.equals(recipient)) {
+                return res.status(400).json({
+                    error: 'Recipient already exists :/',
+                });
+            }
+        }
+
+        await recipient.update(req.body);
+
+        return res.json({ recipient });
     }
 }
 
